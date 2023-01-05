@@ -30,17 +30,11 @@ class MyDataset(Dataset):    # 集成Dataset類
             
             img0 = Image.open(img0_list[0])    # img_list都是大小為2的列表，list[0]為圖像, list[1]為label
             img1 = Image.open(img1_list[0])
-            # img0 = img0.convert("L")           # 轉為灰階
-            # img1 = img1.convert("L")
-        
-            # if self.should_invert:             # 是否進行像素反轉操作，即0變1,1變0
-            #     img0 = PIL.ImageOps.invert(img0)
-            #     img1 = PIL.ImageOps.invert(img1)
   
             if self.transform is not None:     # 非常方便的transform操作，在實例化時可以進行任意定制
                 img0 = self.transform(img0)
                 img1 = self.transform(img1)
-        
+
             return img0, img1 , torch.from_numpy(np.array([int(img1_list[1]!=img0_list[1])],dtype=np.float32))    # 注意一定要返回數據+標籤， 這裡返回一對圖像+label（應由numpy轉為tensor）
     
       def __len__(self):       # 總長

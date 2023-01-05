@@ -130,6 +130,6 @@ class Siamese(object):
 
         plt.subplot(1, 2, 2)
         plt.imshow(np.array(image_2))
-        plt.text(-12, -12, 'Similarity:%.3f' % output, ha='center', va= 'bottom',fontsize=11)
+        plt.text(-12, -12, 'Similarity:%.6f' % output, ha='center', va= 'bottom',fontsize=11)
         plt.show()
         return output

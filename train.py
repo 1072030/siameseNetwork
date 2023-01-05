@@ -13,13 +13,24 @@ import matplotlib.pyplot as plt
 import sys
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-train_data = MyDataset(txt = sys.path[0]+'\data.txt',transform=transforms.Compose(
-            [transforms.Resize((224,224)),transforms.ToTensor()]), should_invert=False)     #Resize到100,100
+def test(x1, x2, label, margin: float = 1.0):
+    """
+    Computes Contrastive Loss
+    """
+    dist = torch.nn.functional.pairwise_distance(x1, x2)
 
-train_dataloader = DataLoader(dataset=train_data, shuffle=True, num_workers=0,batch_size=10)
-net = SiameseNetwork()     # GPU加速
+    loss = (1 - label) * torch.pow(dist, 2) \
+        + (label) * torch.pow(torch.clamp(margin - dist, min=0.0), 2)
+    loss = torch.mean(loss)
+    return loss
+
+train_data = MyDataset(txt = sys.path[0]+'\data.txt',transform=transforms.Compose(
+            [transforms.Resize((64,64)),transforms.ToTensor()]), should_invert=False)     #Resize到100,100
+
+train_dataloader = DataLoader(dataset=train_data, shuffle=True, num_workers=0,batch_size=20)
+net = SiameseNetwork().cuda()     # GPU加速
 criterion = ContrastiveLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.0005) #梯度校正 
+optimizer = optim.Adam(net.parameters(), lr=0.0003) #梯度校正 
 
 
 counter = []
@@ -29,15 +40,15 @@ label_sum=0
 correct_sum = 0
 accuracy_sum={}
 count=0
-for epoch in range(0, 50): #每一輪的訓練次數
+for epoch in range(0, 100): #每一輪的訓練次數
       print("--第{0}輪開始--\n".format(epoch))
       for i, data in enumerate(train_dataloader, 0):
             count+=1
             img0, img1, label = data
-            img0, img1, label = Variable(img0), Variable(img1), Variable(label)  #使用GPU
+            img0, img1, label = Variable(img0).cuda(), Variable(img1).cuda(), Variable(label).cuda()  #使用GPU
             output1, output2= net(img0, img1)#開始訓練
             optimizer.zero_grad() #將所有參數的梯度緩衝區（buffer）歸零
-            loss_contrastive = criterion(output1, output2, label) #loss計算
+            loss_contrastive = test(output1, output2, label) #loss計算
             a = torch.max(output1,1)[1]
             b = torch.max(output2,1)[1]
             correct = (a == b).sum().item()
@@ -47,7 +58,7 @@ for epoch in range(0, 50): #每一輪的訓練次數
             loss_contrastive.backward()#方法開始進行反向傳播
             optimizer.step()#方法來更新權重
             # print(net)
-            if (count == 3):
+            if (count == 8):
                   print("Current loss {0}".format(loss_contrastive.item())) #console顯示
                   print("Accuracy:{0}".format(correct_sum/label_sum))
                   accuracy_sum[epoch]=correct_sum/label_sum
